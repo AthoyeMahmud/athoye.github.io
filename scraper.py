@@ -1,5 +1,6 @@
 
 import json
+import os
 import requests
 from bs4 import BeautifulSoup
 
@@ -29,7 +30,8 @@ def scrape_linktree_data(html_file):
         'links': links
     }
 
-def download_profile_picture(url, filename='profile_picture.jpg'):
+def download_profile_picture(url, output_dir='public'):
+    filename = os.path.join(output_dir, 'profile_picture.jpg')
     response = requests.get(url, stream=True)
     if response.status_code == 200:
         with open(filename, 'wb') as f:
@@ -38,7 +40,7 @@ def download_profile_picture(url, filename='profile_picture.jpg'):
     else:
         print(f"Failed to download profile picture. Status code: {response.status_code}")
 
-def generate_html(data):
+def generate_html(data, output_dir='public'):
     html_content = f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -70,10 +72,10 @@ def generate_html(data):
 </body>
 </html>
 """
-    with open('index.html', 'w', encoding='utf-8') as f:
+    with open(os.path.join(output_dir, 'index.html'), 'w', encoding='utf-8') as f:
         f.write(html_content)
 
-def generate_css():
+def generate_css(output_dir='public'):
     css_content = """
 body {
     background-color: #5C2023;
@@ -137,12 +139,15 @@ body {
     background-color: #ddd;
 }
 """
-    with open('style.css', 'w', encoding='utf-8') as f:
+    with open(os.path.join(output_dir, 'style.css'), 'w', encoding='utf-8') as f:
         f.write(css_content)
 
 if __name__ == '__main__':
+    output_directory = 'public'
+    os.makedirs(output_directory, exist_ok=True)
+
     scraped_data = scrape_linktree_data('linktree.html')
-    download_profile_picture(scraped_data['profile_picture_url'])
-    generate_html(scraped_data)
-    generate_css()
-    print("Successfully generated index.html and style.css")
+    download_profile_picture(scraped_data['profile_picture_url'], output_dir=output_directory)
+    generate_html(scraped_data, output_dir=output_directory)
+    generate_css(output_dir=output_directory)
+    print(f"Successfully generated files in '{output_directory}' directory.")
