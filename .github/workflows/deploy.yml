@@ -1,15 +1,21 @@
-
-name: Deploy to GitHub Pages
+name: Build and Deploy Linktree Snapshot
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Run once a day
+    - cron: '0 0 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
-  deploy:
-    permissions:
-      contents: write
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -25,15 +31,24 @@ jobs:
           python -m pip install --upgrade pip
           pip install beautifulsoup4 requests
 
-      - name: Run scraper
-        run: |
-          curl -L https://linktr.ee/athoye -o linktree.html
-          python scraper.py
+      - name: Fetch Linktree HTML
+        run: curl -fsSL https://linktr.ee/athoye -o linktree.html
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Run scraper
+        run: python scraper.py
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./public
-          publish_branch: gh-pages
-          cname: athoye.github.io
+          path: ./public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
